@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>🌿 Agent Plantes</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Georgia, serif;
+            background: #0a1a0f;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .chat-box {
+            width: 460px;
+            background: #0d1f14;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid rgba(82,180,100,0.2);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .header {
+            background: linear-gradient(135deg, #0d3320, #1a5c35);
+            padding: 24px;
+            text-align: center;
+            border-bottom: 1px solid rgba(82,180,100,0.2);
+        }
+        .header h1 { color: #a8e6b8; font-size: 20px; font-weight: normal; letter-spacing: 3px; text-transform: uppercase; }
+        .header p { color: rgba(168,230,184,0.5); font-size: 12px; margin-top: 4px; letter-spacing: 1px; }
+        .messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .bot {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(82,180,100,0.15);
+            color: #b8d4bf;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .user {
+            background: linear-gradient(135deg, #1a5c35, #2d8a4e);
+            color: #e8f5e9;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .image-preview {
+            max-width: 200px;
+            border-radius: 12px;
+            align-self: flex-end;
+            border: 2px solid rgba(82,180,100,0.3);
+        }
+        .typing { color: #52c97a; font-style: italic; font-size: 13px; align-self: flex-start; }
+        .input-area {
+            display: flex;
+            gap: 10px;
+            padding: 16px;
+            border-top: 1px solid rgba(82,180,100,0.1);
+            background: #081510;
+            align-items: center;
+        }
+        input[type="text"] {
+            flex: 1;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(82,180,100,0.2);
+            border-radius: 25px;
+            padding: 12px 18px;
+            color: #b8d4bf;
+            font-size: 14px;
+            outline: none;
+            font-family: Georgia, serif;
+        }
+        input[type="text"]::placeholder { color: rgba(168,230,184,0.3); }
+        .btn {
+            background: linear-gradient(135deg, #1a5c35, #2d8a4e);
+            border: none;
+            border-radius: 50%;
+            width: 46px;
+            height: 46px;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(45,138,78,0.4);
+            flex-shrink: 0;
+        }
+        .btn:hover { transform: scale(1.05); }
+        .btn-photo {
+            background: rgba(82,180,100,0.1);
+            border: 1px solid rgba(82,180,100,0.3);
+            font-size: 20px;
+        }
+        input[type="file"] { display: none; }
+
+        /* ============================================
+           ✅ NOUVEAU — Barre Premium en bas du chat
+           ============================================ */
+        .barre-premium {
+            /* Barre discrète collée sous la zone de saisie */
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            background: rgba(255, 195, 0, 0.05);
+            border-top: 1px solid rgba(255, 195, 0, 0.15);
+        }
+
+        .barre-premium .texte-premium {
+            font-size: 12px;
+            color: rgba(255, 195, 0, 0.6);
+            font-family: Georgia, serif;
+            letter-spacing: 0.5px;
+        }
+
+        .barre-premium .texte-premium span {
+            /* Le petit emoji étoile */
+            margin-right: 5px;
+        }
+
+        /* Bouton "Passer Premium" */
+        .btn-premium {
+            background: transparent;
+            border: 1px solid rgba(255, 195, 0, 0.5);
+            border-radius: 20px;
+            padding: 5px 14px;
+            color: #FFC300;
+            font-size: 12px;
+            cursor: pointer;
+            font-family: Georgia, serif;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+        }
+        .btn-premium:hover {
+            background: rgba(255, 195, 0, 0.1);
+            border-color: #FFC300;
+        }
+
+        /* ============================================
+           ✅ NOUVEAU — Fenêtre modale de paiement
+           Apparaît quand on clique sur "Passer Premium"
+           ============================================ */
+
+        /* Le fond sombre derrière la modale */
+        .overlay-modal {
+            display: none; /* caché par défaut */
+            position: fixed;
+            inset: 0; /* couvre tout l'écran */
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 100;
+            /* On centre la modale dans le fond */
+            align-items: center;
+            justify-content: center;
+        }
+        /* Quand on l'ouvre, on passe à flex */
+        .overlay-modal.ouvert {
+            display: flex;
+        }
+
+        /* La fenêtre blanche de paiement */
+        .modal-paiement {
+            background: #0d1f14;
+            border: 1px solid rgba(255, 195, 0, 0.3);
+            border-radius: 20px;
+            padding: 28px;
+            width: 380px;
+            max-width: 90vw;
+            position: relative;
+        }
+
+        /* Bouton X pour fermer */
+        .btn-fermer {
+            position: absolute;
+            top: 14px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: rgba(168,230,184,0.4);
+            font-size: 20px;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .btn-fermer:hover { color: #a8e6b8; }
+
+        /* Titre de la modale */
+        .modal-titre {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .modal-titre h2 {
+            color: #FFC300;
+            font-size: 18px;
+            font-weight: normal;
+            letter-spacing: 2px;
+        }
+        .modal-titre p {
+            color: rgba(168,230,184,0.5);
+            font-size: 12px;
+            margin-top: 6px;
+        }
+
+        /* Carte des avantages Premium */
+        .avantages {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(82,180,100,0.15);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+        }
+        .avantage-ligne {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: #b8d4bf;
+            padding: 5px 0;
+        }
+        .avantage-ligne .icone { color: #52c97a; font-size: 14px; }
+
+        /* Prix affiché */
+        .prix-bloc {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .prix-montant {
+            font-size: 28px;
+            color: #FFC300;
+            letter-spacing: 1px;
+        }
+        .prix-periode {
+            font-size: 12px;
+            color: rgba(168,230,184,0.4);
+            margin-top: 2px;
+        }
+
+        /* Champs du formulaire dans la modale */
+        .champ-modal { margin-bottom: 12px; }
+        .champ-modal label {
+            display: block;
+            font-size: 12px;
+            color: rgba(168,230,184,0.5);
+            margin-bottom: 4px;
+            font-family: Georgia, serif;
+        }
+        .champ-modal input {
+            width: 100%;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(82,180,100,0.2);
+            border-radius: 8px;
+            padding: 10px 12px;
+            color: #b8d4bf;
+            font-size: 13px;
+            outline: none;
+            font-family: Georgia, serif;
+            transition: border-color 0.2s;
+        }
+        .champ-modal input:focus {
+            border-color: rgba(255, 195, 0, 0.5);
+        }
+        .champ-modal input::placeholder {
+            color: rgba(168,230,184,0.2);
+        }
+
+        /* Bouton de paiement dans la modale */
+        .btn-payer-modal {
+            width: 100%;
+            padding: 13px;
+            background: #FFC300;
+            color: #0a1a0f;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: Georgia, serif;
+            letter-spacing: 1px;
+            transition: background 0.2s, transform 0.1s;
+            margin-top: 4px;
+        }
+        .btn-payer-modal:hover    { background: #e6af00; }
+        .btn-payer-modal:active   { transform: scale(0.98); }
+        .btn-payer-modal:disabled { background: #555; color: #999; cursor: not-allowed; }
+
+        /* Spinner de chargement */
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(0,0,0,0.2);
+            border-top-color: #0a1a0f;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Message résultat dans la modale */
+        .msg-resultat {
+            display: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 13px;
+            text-align: center;
+            margin-top: 12px;
+            line-height: 1.6;
+            font-family: Georgia, serif;
+        }
+        .msg-resultat.succes {
+            background: rgba(82,180,100,0.1);
+            color: #52c97a;
+            border: 1px solid rgba(82,180,100,0.3);
+        }
+        .msg-resultat.echec {
+            background: rgba(200,50,50,0.1);
+            color: #e57373;
+            border: 1px solid rgba(200,50,50,0.2);
+        }
+        .msg-resultat.chargement {
+            background: rgba(255,195,0,0.08);
+            color: #FFC300;
+            border: 1px solid rgba(255,195,0,0.2);
+        }
+
+        /* Logos des moyens de paiement */
+        .moyens-paiement {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 14px;
+        }
+        .moyen-badge {
+            font-size: 10px;
+            padding: 3px 9px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(82,180,100,0.15);
+            border-radius: 20px;
+            color: rgba(168,230,184,0.4);
+        }
+
+        /* Texte sécurité */
+        .securite-txt {
+            text-align: center;
+            font-size: 11px;
+            color: rgba(168,230,184,0.25);
+            margin-top: 10px;
+            font-family: Georgia, serif;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ==========================================
+     CHAT FLORA (votre code original intact)
+     ========================================== -->
+<div class="chat-box">
+    <div class="header">
+        <h1>🌿 Agent Plantes</h1>
+        <p>Flora — Experte Botaniste</p>
+    </div>
+
+    <div class="messages" id="messages">
+        <div class="message bot">
+            🌱 Bonjour ! Je suis Flora. Posez-moi une question sur une plante ou envoyez-moi une 📸 photo pour que je l'identifie !
+        </div>
+    </div>
+
+    <div class="input-area">
+        <button class="btn btn-photo" onclick="document.getElementById('fileInput').click()" title="Envoyer une photo">📸</button>
+        <input type="file" id="fileInput" accept="image/*" onchange="envoyerPhoto(this)" />
+        <input type="text" id="input" placeholder="Ex: C'est quoi le baobab ?" />
+        <button class="btn" onclick="envoyer()">➤</button>
+    </div>
+
+    <!-- ✅ NOUVEAU — Barre Premium discrète sous la zone de saisie -->
+    <div class="barre-premium">
+        <span class="texte-premium">
+            <span>✨</span> Accès illimité + analyses avancées
+        </span>
+        <!-- Ce bouton ouvre la modale de paiement -->
+        <button class="btn-premium" onclick="ouvrirModalPaiement()">
+            Passer Premium
+        </button>
+    </div>
+
+</div>
+
+
+<!-- ==========================================
+     ✅ NOUVEAU — FENÊTRE MODALE PAIEMENT
+     Invisible au départ, s'ouvre au clic
+     ========================================== -->
+<div class="overlay-modal" id="overlay-modal">
+    <div class="modal-paiement">
+
+        <!-- Bouton fermer -->
+        <button class="btn-fermer" onclick="fermerModalPaiement()">✕</button>
+
+        <!-- Titre -->
+        <div class="modal-titre">
+            <h2>✨ Flora Premium</h2>
+            <p>Débloquez toutes les fonctionnalités</p>
+        </div>
+
+        <!-- Liste des avantages -->
+        <div class="avantages">
+            <div class="avantage-ligne">
+                <span class="icone">🌿</span>
+                <span>Identifications illimitées de plantes</span>
+            </div>
+            <div class="avantage-ligne">
+                <span class="icone">📸</span>
+                <span>Analyse de photos en haute précision</span>
+            </div>
+            <div class="avantage-ligne">
+                <span class="icone">📚</span>
+                <span>Fiches botaniques complètes</span>
+            </div>
+            <div class="avantage-ligne">
+                <span class="icone">💬</span>
+                <span>Historique de conversations illimité</span>
+            </div>
+        </div>
+
+        <!-- Prix -->
+        <div class="prix-bloc">
+            <div class="prix-montant">5 000 FCFA</div>
+            <div class="prix-periode">par mois — annulable à tout moment</div>
+        </div>
+
+        <!-- Formulaire client -->
+        <div class="champ-modal">
+            <label for="pd-prenom">Prénom</label>
+            <input type="text" id="pd-prenom" placeholder="Ex : Aminata" />
+        </div>
+        <div class="champ-modal">
+            <label for="pd-nom">Nom</label>
+            <input type="text" id="pd-nom" placeholder="Ex : Koné" />
+        </div>
+        <div class="champ-modal">
+            <label for="pd-email">Email</label>
+            <input type="email" id="pd-email" placeholder="Ex : aminata@email.com" />
+        </div>
+        <div class="champ-modal">
+            <label for="pd-tel">Téléphone</label>
+            <input type="text" id="pd-tel" placeholder="Ex : +2250700000000" />
+        </div>
+
+        <!-- Bouton payer -->
+        <button class="btn-payer-modal" id="btn-payer-modal" onclick="lancerPaiementPremium()">
+            Payer 5 000 FCFA
+        </button>
+
+        <!-- Message résultat -->
+        <div class="msg-resultat" id="msg-resultat"></div>
+
+        <!-- Logos des moyens de paiement -->
+        <div class="moyens-paiement">
+            <span class="moyen-badge">MTN Money</span>
+            <span class="moyen-badge">Orange Money</span>
+            <span class="moyen-badge">Wave</span>
+            <span class="moyen-badge">Moov</span>
+            <span class="moyen-badge">Visa / Mastercard</span>
+        </div>
+
+        <p class="securite-txt">🔒 Paiement sécurisé — Powered by PayDunya</p>
+
+    </div>
+</div>
+
+
+<!-- ==========================================
+     JAVASCRIPT — Votre code original + PayDunya
+     ========================================== -->
+<script>
+
+    // ─────────────────────────────────────────
+    // VOTRE CODE ORIGINAL (non modifié)
+    // ─────────────────────────────────────────
+    const input = document.getElementById("input");
+    const messages = document.getElementById("messages");
+
+    input.addEventListener("keypress", e => {
+        if (e.key === "Enter") envoyer();
+    });
+
+    function ajouterMessage(texte, type) {
+        const div = document.createElement("div");
+        div.className = "message " + type;
+        div.textContent = texte;
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    function ajouterTyping() {
+        const div = document.createElement("div");
+        div.className = "message typing";
+        div.id = "typing";
+        div.textContent = "🌿 Flora réfléchit...";
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    function supprimerTyping() {
+        const t = document.getElementById("typing");
+        if (t) t.remove();
+    }
+
+    async function envoyer() {
+        const texte = input.value.trim();
+        if (!texte) return;
+        ajouterMessage(texte, "user");
+        input.value = "";
+        ajouterTyping();
+        const res = await fetch("http://localhost:8000/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: texte })
+        });
+        const data = await res.json();
+        supprimerTyping();
+        ajouterMessage(data.reponse, "bot");
+    }
+
+    async function envoyerPhoto(input) {
+        const fichier = input.files[0];
+        if (!fichier) return;
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const base64 = e.target.result.split(",")[1];
+            const img = document.createElement("img");
+            img.src = e.target.result;
+            img.className = "image-preview";
+            messages.appendChild(img);
+            messages.scrollTop = messages.scrollHeight;
+            ajouterTyping();
+            const res = await fetch("http://localhost:8000/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ image: base64 })
+            });
+            const data = await res.json();
+            supprimerTyping();
+            ajouterMessage(data.reponse, "bot");
+        };
+        reader.readAsDataURL(fichier);
+        input.value = "";
+    }
+
+
+    // ─────────────────────────────────────────────────────
+    // ✅ NOUVEAU — CODE PAYDUNYA
+    // ─────────────────────────────────────────────────────
+
+    // 🔑 VOS CLÉS PAYDUNYA
+    // Remplacez ces valeurs avec vos vraies clés
+    // Trouvez-les dans : Dashboard PayDunya → Paramètres → API
+    var CLE_MASTER   = "VOTRE_MASTER_KEY_ICI";   // ← à remplacer
+    var CLE_PRIVEE   = "VOTRE_PRIVATE_KEY_ICI";  // ← à remplacer
+    var TOKEN        = "VOTRE_TOKEN_ICI";         // ← à remplacer
+    var CLE_PUBLIQUE = "VOTRE_PUBLIC_KEY_ICI";    // ← à remplacer
+
+    // "test" pour tester sans vrai argent / "live" pour la production
+    var MODE_PAYDUNYA = "test";
+
+
+    // Ouvrir la fenêtre modale
+    function ouvrirModalPaiement() {
+        document.getElementById("overlay-modal").classList.add("ouvert");
+    }
+
+    // Fermer la fenêtre modale
+    function fermerModalPaiement() {
+        document.getElementById("overlay-modal").classList.remove("ouvert");
+        // On remet le message à zéro quand on ferme
+        var msg = document.getElementById("msg-resultat");
+        msg.style.display = "none";
+        msg.textContent = "";
+    }
+
+    // Fermer si on clique sur le fond sombre (pas sur la modale)
+    document.getElementById("overlay-modal").addEventListener("click", function(e) {
+        if (e.target === this) fermerModalPaiement();
+    });
+
+    // Afficher un message dans la modale
+    function afficherMsg(type, texte) {
+        var div = document.getElementById("msg-resultat");
+        div.className = "msg-resultat " + type;
+        div.innerHTML = texte;
+        div.style.display = "block";
+    }
+
+    // Générer un numéro de facture unique à chaque paiement
+    function genererNumeroFacture() {
+        return "FLORA-" + new Date().getTime() + "-" + Math.floor(Math.random() * 9999);
+    }
+
+    // Lancer le paiement Premium quand on clique sur "Payer"
+    async function lancerPaiementPremium() {
+
+        // Récupérer les valeurs du formulaire
+        var prenom = document.getElementById("pd-prenom").value.trim();
+        var nom    = document.getElementById("pd-nom").value.trim();
+        var email  = document.getElementById("pd-email").value.trim();
+        var tel    = document.getElementById("pd-tel").value.trim();
+
+        // Vérifier que tout est rempli
+        if (!prenom || !nom || !email || !tel) {
+            afficherMsg("echec", "⚠️ Veuillez remplir tous les champs.");
+            return;
+        }
+        if (!email.includes("@")) {
+            afficherMsg("echec", "⚠️ L'adresse email n'est pas valide.");
+            return;
+        }
+
+        // Désactiver le bouton pendant le traitement
+        var btn = document.getElementById("btn-payer-modal");
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>Connexion à PayDunya...';
+        afficherMsg("chargement", "⏳ Création de votre abonnement...");
+
+        // Construire les données à envoyer à PayDunya
+        var donnees = {
+            "invoice": {
+                "total_amount": 5000,
+                "description" : "Abonnement Flora Premium — 1 mois"
+            },
+            "store": {
+                "name"    : "Agent Plantes — Flora",
+                "tagline" : "Votre experte botaniste IA",
+                "phone"   : "+2250700000000"
+            },
+            "custom_data": {
+                "prenom": prenom, "nom": nom,
+                "email" : email,  "telephone": tel
+            },
+            "actions": {
+                // ⚠️ Remplacez par les vraies URLs de votre site
+                "cancel_url"  : "https://votre-site.com/annule.html",
+                "return_url"  : "https://votre-site.com/merci.html",
+                "callback_url": "https://votre-site.com/paydunya/callback"
+            }
+        };
+
+        // Appel à l'API PayDunya
+        var urlAPI = "https://app.paydunya.com/" + MODE_PAYDUNYA + "/api/v1/checkout-invoice/create";
+
+        try {
+            var reponse = await fetch(urlAPI, {
+                method : "POST",
+                headers: {
+                    "Content-Type"        : "application/json",
+                    "PAYDUNYA-MASTER-KEY" : CLE_MASTER,
+                    "PAYDUNYA-PRIVATE-KEY": CLE_PRIVEE,
+                    "PAYDUNYA-TOKEN"      : TOKEN,
+                    "PAYDUNYA-PUBLIC-KEY" : CLE_PUBLIQUE
+                },
+                body: JSON.stringify(donnees)
+            });
+
+            var data = await reponse.json();
+
+            // PayDunya renvoie response_code = "00" si tout va bien
+            if (data.response_code === "00") {
+
+                // ✅ Succès : on redirige vers la page de paiement PayDunya
+                afficherMsg("succes",
+                    "✅ Redirection vers PayDunya...<br>" +
+                    "Si rien ne se passe : <a href='" + data.invoice_url +
+                    "' target='_blank' style='color:#52c97a'>cliquez ici</a>"
+                );
+                setTimeout(function() {
+                    window.location.href = data.invoice_url;
+                }, 1500);
+
+            } else {
+                // ❌ Erreur renvoyée par PayDunya
+                btn.disabled = false;
+                btn.innerHTML = "Payer 5 000 FCFA";
+                afficherMsg("echec", "❌ " + (data.response_text || "Vérifiez vos clés API."));
+            }
+
+        } catch (erreur) {
+            // ❌ Erreur réseau (pas d'internet, etc.)
+            console.error("Erreur réseau PayDunya :", erreur);
+            btn.disabled = false;
+            btn.innerHTML = "Payer 5 000 FCFA";
+            afficherMsg("echec", "❌ Erreur de connexion. Vérifiez votre internet.");
+        }
+    }
+
+</script>
+</body>
+</html>
