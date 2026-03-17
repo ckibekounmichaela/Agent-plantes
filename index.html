@@ -564,16 +564,9 @@
     // ✅ NOUVEAU — CODE PAYDUNYA
     // ─────────────────────────────────────────────────────
 
-    // 🔑 VOS CLÉS PAYDUNYA
-    // Remplacez ces valeurs avec vos vraies clés
-    // Trouvez-les dans : Dashboard PayDunya → Paramètres → API
-    var CLE_MASTER   = "VOTRE_MASTER_KEY_ICI";   // ← à remplacer
-    var CLE_PRIVEE   = "VOTRE_PRIVATE_KEY_ICI";  // ← à remplacer
-    var TOKEN        = "VOTRE_TOKEN_ICI";         // ← à remplacer
-    var CLE_PUBLIQUE = "VOTRE_PUBLIC_KEY_ICI";    // ← à remplacer
-
-    // "test" pour tester sans vrai argent / "live" pour la production
-    var MODE_PAYDUNYA = "test";
+    // ✅ Plus besoin de clés API ici !
+    // Les clés sont maintenant dans app.py (plus sécurisé)
+    // Le HTML envoie juste les infos du client à notre serveur Python
 
 
     // Ouvrir la fenêtre modale
@@ -656,50 +649,46 @@
             }
         };
 
-        // Appel à l'API PayDunya
-        var urlAPI = "https://app.paydunya.com/" + MODE_PAYDUNYA + "/api/v1/checkout-invoice/create";
-
+        // ✅ On envoie les infos À NOTRE SERVEUR PYTHON (pas à PayDunya directement)
+        // C'est app.py qui contacte PayDunya — plus de problème CORS !
         try {
-            var reponse = await fetch(urlAPI, {
+            var reponse = await fetch("http://localhost:8000/paiement", {
                 method : "POST",
-                headers: {
-                    "Content-Type"        : "application/json",
-                    "PAYDUNYA-MASTER-KEY" : CLE_MASTER,
-                    "PAYDUNYA-PRIVATE-KEY": CLE_PRIVEE,
-                    "PAYDUNYA-TOKEN"      : TOKEN,
-                    "PAYDUNYA-PUBLIC-KEY" : CLE_PUBLIQUE
-                },
-                body: JSON.stringify(donnees)
+                headers: { "Content-Type": "application/json" },
+                body   : JSON.stringify({
+                    prenom   : prenom,
+                    nom      : nom,
+                    email    : email,
+                    telephone: tel
+                })
             });
 
             var data = await reponse.json();
 
-            // PayDunya renvoie response_code = "00" si tout va bien
-            if (data.response_code === "00") {
-
-                // ✅ Succès : on redirige vers la page de paiement PayDunya
+            if (data.succes === true) {
+                // ✅ Succès : notre serveur a créé la facture PayDunya
                 afficherMsg("succes",
                     "✅ Redirection vers PayDunya...<br>" +
-                    "Si rien ne se passe : <a href='" + data.invoice_url +
+                    "Si rien ne se passe : <a href='" + data.url +
                     "' target='_blank' style='color:#52c97a'>cliquez ici</a>"
                 );
                 setTimeout(function() {
-                    window.location.href = data.invoice_url;
+                    window.location.href = data.url;
                 }, 1500);
 
             } else {
-                // ❌ Erreur renvoyée par PayDunya
+                // ❌ Erreur renvoyée par notre serveur
                 btn.disabled = false;
                 btn.innerHTML = "Payer 5 000 FCFA";
-                afficherMsg("echec", "❌ " + (data.response_text || "Vérifiez vos clés API."));
+                afficherMsg("echec", "❌ " + (data.erreur || "Une erreur est survenue."));
             }
 
         } catch (erreur) {
-            // ❌ Erreur réseau (pas d'internet, etc.)
-            console.error("Erreur réseau PayDunya :", erreur);
+            // ❌ Erreur réseau — vérifiez que app.py est bien lancé !
+            console.error("Erreur :", erreur);
             btn.disabled = false;
             btn.innerHTML = "Payer 5 000 FCFA";
-            afficherMsg("echec", "❌ Erreur de connexion. Vérifiez votre internet.");
+            afficherMsg("echec", "❌ Impossible de contacter le serveur.<br>Vérifiez que app.py est lancé.");
         }
     }
 
